@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Automatic Solar Tracking System — Interactive Simulation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0b1120;
+      color: #f1f5f9;
+      overflow-x: hidden;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    /* Custom subtle range slider styling */
+    input[type="range"] {
+      accent-color: #f59e0b;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Engineering Header Bar -->
+  <header class="bg-slate-900/90 border-b border-slate-800 px-4 py-3 sm:px-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+    <div class="flex items-start sm:items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center shrink-0 text-amber-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="4" />
+          <path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" />
+        </svg>
+      </div>
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">
+            Smart Automatic Solar Tracking System
+          </h1>
+          <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            TDA2822M Analog BTL Driver
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mt-0.5">
+          MIT Academy of Engineering, Alandi, Pune • EVS Unit 4 Project • Akash Pujari, Onkar Ligade, Tushar Yadav, Vedant Dere
+        </p>
+      </div>
+    </div>
+
+    <!-- Primary Simulation Mode Controls -->
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="btnAutoSweep" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-sm flex items-center gap-1.5 cursor-pointer">
+        <span id="sweepIcon">▶</span>
+        <span id="sweepLabel">Auto Sunrise–Sunset Sweep</span>
+      </button>
+      <button id="btnTrackingToggle" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm cursor-pointer">
+        Mode: Active Tracking (ON)
+      </button>
+      <button id="btnResetEnergy" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer">
+        Reset Counters
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace Grid -->
+  <main class="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-4 p-4 sm:p-5 max-w-[1600px] w-full mx-auto">
+
+    <!-- Left & Center Column (7 cols): Interactive Sky Canvas + Live Schematic Canvas -->
+    <div class="xl:col-span-7 flex flex-col gap-4">
+
+      <!-- Card 1: Interactive Sky & Solar Panel Physics Canvas -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-lg">
+        <div class="px-4 py-2.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 bg-slate-900/60">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <h2 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider">
+              1. Optical & Mechanical Tracking Simulation (Drag Sun Across Sky)
+            </h2>
+          </div>
+
+          <!-- Weather / Light Source Preset Selector -->
+          <div class="flex items-center gap-1.5 text-xs">
+            <button data-weather="sunny" class="weather-btn px-2.5 py-1 rounded-md font-medium bg-amber-500/20 text-amber-300 border border-amber-500/40 cursor-pointer">
+              Clear Sunny
+            </button>
+            <button data-weather="cloudy" class="weather-btn px-2.5 py-1 rounded-md font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer">
+              Partly Cloudy
+            </button>
+            <button data-weather="flashlight" class="weather-btn px-2.5 py-1 rounded-md font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer">
+              Lab Flashlight
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div id="skyCanvasWrapper" class="relative w-full h-[320px] sm:h-[360px] bg-slate-950 select-none">
+          <canvas id="skyCanvas"></canvas>
+          <div class="absolute bottom-2.5 left-3 right-3 flex flex-wrap items-center justify-between gap-2 pointer-events-none text-[11px] text-slate-300 bg-slate-950/75 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-800/80">
+            <span>Tip: Click or drag the Sun along the East–West arc (−75° to +75°)</span>
+            <span id="overlayAngleReadout" class="mono text-amber-300 font-semibold">Sun: -35.0° | Panel: -35.0°</span>
+          </div>
+        </div>
+
+        <!-- Manual Sun Angle & Battery Voltage Sliders -->
+        <div class="px-4 py-3 bg-slate-900/90 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div>
+            <div class="flex justify-between mb-1">
+              <label for="sunSlider" class="text-slate-400 font-medium">Manual Sun Azimuth Angle</label>
+              <span id="sunSliderVal" class="mono text-amber-400 font-semibold">-35° (East)</span>
+            </div>
+            <input id="sunSlider" type="range" min="-75" max="75" step="0.5" value="-35" class="w-full cursor-pointer" />
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <label for="vccSlider" class="text-slate-400 font-medium">18650 Li-Ion Cell Voltage (Vcc)</label>
+              <span id="vccSliderVal" class="mono text-emerald-400 font-semibold">3.70 V</span>
+            </div>
+            <input id="vccSlider" type="range" min="3.2" max="4.2" step="0.05" value="3.7" class="w-full cursor-pointer" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 2: Live TDA2822M Pin-to-Pin Schematic & Current Flow Visualizer -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-lg">
+        <div class="px-4 py-2.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            <h2 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider">
+              2. Live TDA2822M BTL Circuit Schematic & Pinout Flow
+            </h2>
+          </div>
+          <span id="motorDirectionPill" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold mono bg-slate-800 text-slate-300 border border-slate-700">
+            EQUILIBRIUM LOCKED
+          </span>
+        </div>
+
+        <div id="schematicWrapper" class="relative w-full h-[270px] sm:h-[290px] bg-slate-950">
+          <canvas id="schematicCanvas"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <!-- Right Column (5 cols): Live Multimeter Telemetry & Environmental Yield Dashboard -->
+    <div class="xl:col-span-5 flex flex-col gap-4">
+
+      <!-- Card 3: Digital Multimeter & Comparator Readouts -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col gap-3.5">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <h2 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider">
+            3. Live Circuit Telemetry (Multimeter)
+          </h2>
+          <span id="icSafetyBadge" class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            IC SAFE • 0.00 A / 1.0 A Max
+          </span>
+        </div>
+
+        <!-- Primary Node Voltages Grid -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400 font-medium">Reference Node (Pins 5 & 7)</div>
+            <div class="text-[10px] text-slate-500 mb-1">2 × 10 kΩ Fixed Divider (Vcc/2)</div>
+            <div id="readoutVref" class="mono text-xl font-bold text-cyan-400">1.85 V</div>
+          </div>
+
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400 font-medium">Optical Sensor Node (Pins 6 & 8)</div>
+            <div class="text-[10px] text-slate-500 mb-1">LDR 1 / LDR 2 Divider (Vsense)</div>
+            <div id="readoutVsense" class="mono text-xl font-bold text-amber-400">1.85 V</div>
+          </div>
+
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400 font-medium">Differential Error (Vsense − Vref)</div>
+            <div id="readoutDeltaV" class="mono text-lg font-bold text-slate-200 mt-1">0.00 V</div>
+          </div>
+
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400 font-medium">Motor Drive (Pin 1 − Pin 3)</div>
+            <div id="readoutVmotor" class="mono text-lg font-bold text-emerald-400 mt-1">0.00 V</div>
+          </div>
+        </div>
+
+        <!-- LDR Resistances & Illumination Bars -->
+        <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 flex flex-col gap-2.5">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-semibold text-slate-300">Optical Sensor Bridge Balance</span>
+            <span class="mono text-[11px] text-slate-400">Lower Ω = Brighter Light</span>
+          </div>
+
+          <!-- LDR 1 -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-300">LDR 1 (East / Left Edge → +Vcc)</span>
+              <span id="readoutLdr1" class="mono text-amber-300 font-semibold">10.0 kΩ (50%)</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="barLdr1" class="h-full bg-amber-400 transition-all duration-75" style="width: 50%"></div>
+            </div>
+          </div>
+
+          <!-- LDR 2 -->
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-300">LDR 2 (West / Right Edge → GND)</span>
+              <span id="readoutLdr2" class="mono text-amber-300 font-semibold">10.0 kΩ (50%)</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="barLdr2" class="h-full bg-amber-400 transition-all duration-75" style="width: 50%"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 4: Photovoltaic Efficiency & Environmental Impact Metrics -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col gap-3.5 flex-1">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <h2 class="text-xs sm:text-sm font-semibold text-slate-200 uppercase tracking-wider">
+            4. Solar Energy Yield & Environmental Impact
+          </h2>
+          <span class="text-[11px] text-slate-400">Lambert's Cosine Law</span>
+        </div>
+
+        <!-- Incidence Angle & Cosine Efficiency -->
+        <div class="grid grid-cols-3 gap-2.5 text-center">
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-[11px] text-slate-400">Incidence Angle θ</div>
+            <div id="readoutIncidence" class="mono text-lg font-bold text-white mt-0.5">0.0°</div>
+          </div>
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-[11px] text-slate-400">Optical Capture</div>
+            <div id="readoutCosEff" class="mono text-lg font-bold text-emerald-400 mt-0.5">100.0%</div>
+          </div>
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-[11px] text-slate-400">Gain vs. Fixed</div>
+            <div id="readoutInstantGain" class="mono text-lg font-bold text-amber-400 mt-0.5">+0.0%</div>
+          </div>
+        </div>
+
+        <!-- Instantaneous Power Comparison (Tracked vs Fixed 0°) -->
+        <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 flex flex-col gap-2">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-slate-300 font-medium">Active Tracked PV Output (10 W Scaled Reference)</span>
+            <span id="readoutTrackedPower" class="mono font-bold text-emerald-400">10.00 W</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="barTrackedPower" class="h-full bg-emerald-500 transition-all duration-75" style="width: 100%"></div>
+          </div>
+
+          <div class="flex justify-between items-center text-xs mt-1">
+            <span class="text-slate-400 font-medium">Fixed-Tilt Stationary Panel (0° Horizontal)</span>
+            <span id="readoutFixedPower" class="mono font-semibold text-slate-300">8.19 W</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="barFixedPower" class="h-full bg-slate-500 transition-all duration-75" style="width: 82%"></div>
+          </div>
+        </div>
+
+        <!-- Cumulative Day Yield & Carbon Reduction (Scaled to 1 kW Array) -->
+        <div class="bg-emerald-950/30 border border-emerald-800/40 rounded-xl p-3 grid grid-cols-2 gap-3">
+          <div>
+            <div class="text-[11px] text-emerald-300/80 font-medium">Cumulative Yield Gain</div>
+            <div id="readoutCumGain" class="mono text-lg font-bold text-emerald-300 mt-0.5">+0.0%</div>
+            <div id="readoutEnergySummary" class="text-[10px] text-slate-400 mt-0.5">Tracked: 0.0 Wh vs Fixed: 0.0 Wh</div>
+          </div>
+          <div>
+            <div class="text-[11px] text-emerald-300/80 font-medium">CO₂ Avoided (1 kW Array Eq.)</div>
+            <div id="readoutCo2Saved" class="mono text-lg font-bold text-amber-300 mt-0.5">0.00 kg</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">CEA India Grid Baseline: 0.82 kg/kWh</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    /**
+     * SMART AUTOMATIC SOLAR TRACKING SYSTEM SIMULATION
+     * Models the TDA2822M Dual Op-Amp Bridge-Tied Load (BTL) comparator & motor driver,
+     * dual edge-mounted LDR optical bridge with central shadow baffle, and PV cosine yield.
+     */
+    (function () {
+      // Simulation State
+      const state = {
+        sunAngle: -35,          // Degrees (-75 East to +75 West, 0 is Zenith/Noon)
+        panelAngle: -35,        // Current PV panel tilt angle in degrees
+        targetPanelAngle: -35,
+        vcc: 3.70,              // 18650 battery voltage (V)
+        trackingEnabled: true,  // True = Active TDA2822M closed-loop tracking, False = Fixed at 0 deg
+        autoSweep: false,       // Automated Sunrise-to-Sunset sweep
+        sweepDir: 1,
+        weather: 'sunny',       // 'sunny' | 'cloudy' | 'flashlight'
+        isDraggingSun: false,
+
+        // Electrical values updated every frame
+        vRef: 1.85,
+        vSense: 1.85,
+        deltaV: 0,
+        rLdr1: 10.0,            // kOhms
+        rLdr2: 10.0,            // kOhms
+        illum1: 0.5,            // 0..1 normalized illumination on LDR 1
+        illum2: 0.5,            // 0..1 normalized illumination on LDR 2
+        motorState: 'STOPPED',  // 'EAST' | 'WEST' | 'STOPPED'
+        vPin1: 1.85,
+        vPin3: 1.85,
+        motorCurrentMa: 0,      // mA
+
+        // Cumulative Energy Metrics (10 W model scaled & 1 kW array CO2 equivalent)
+        trackedWh: 0,
+        fixedWh: 0,
+        animPhase: 0
+      };
+
+      // DOM References
+      const skyCanvas = document.getElementById('skyCanvas');
+      const skyCtx = skyCanvas.getContext('2d');
+      const schemCanvas = document.getElementById('schematicCanvas');
+      const schemCtx = schemCanvas.getContext('2d');
+
+      const sunSlider = document.getElementById('sunSlider');
+      const sunSliderVal = document.getElementById('sunSliderVal');
+      const vccSlider = document.getElementById('vccSlider');
+      const vccSliderVal = document.getElementById('vccSliderVal');
+      const btnAutoSweep = document.getElementById('btnAutoSweep');
+      const sweepIcon = document.getElementById('sweepIcon');
+      const sweepLabel = document.getElementById('sweepLabel');
+      const btnTrackingToggle = document.getElementById('btnTrackingToggle');
+      const btnResetEnergy = document.getElementById('btnResetEnergy');
+      const weatherBtns = document.querySelectorAll('.weather-btn');
+
+      // Telemetry DOM Elements
+      const overlayAngleReadout = document.getElementById('overlayAngleReadout');
+      const motorDirectionPill = document.getElementById('motorDirectionPill');
+      const icSafetyBadge = document.getElementById('icSafetyBadge');
+      const readoutVref = document.getElementById('readoutVref');
+      const readoutVsense = document.getElementById('readoutVsense');
+      const readoutDeltaV = document.getElementById('readoutDeltaV');
+      const readoutVmotor = document.getElementById('readoutVmotor');
+      const readoutLdr1 = document.getElementById('readoutLdr1');
+      const readoutLdr2 = document.getElementById('readoutLdr2');
+      const barLdr1 = document.getElementById('barLdr1');
+      const barLdr2 = document.getElementById('barLdr2');
+      const readoutIncidence = document.getElementById('readoutIncidence');
+      const readoutCosEff = document.getElementById('readoutCosEff');
+      const readoutInstantGain = document.getElementById('readoutInstantGain');
+      const readoutTrackedPower = document.getElementById('readoutTrackedPower');
+      const barTrackedPower = document.getElementById('barTrackedPower');
+      const readoutFixedPower = document.getElementById('readoutFixedPower');
+      const barFixedPower = document.getElementById('barFixedPower');
+      const readoutCumGain = document.getElementById('readoutCumGain');
+      const readoutEnergySummary = document.getElementById('readoutEnergySummary');
+      const readoutCo2Saved = document.getElementById('readoutCo2Saved');
+
+      // Responsive Canvas Sizing with DevicePixelRatio
+      function resizeCanvases() {
+        const dpr = window.devicePixelRatio || 1;
+        [skyCanvas, schemCanvas].forEach((canvas) => {
+          const rect = canvas.parentElement.getBoundingClientRect();
+          canvas.width = Math.max(300, Math.floor(rect.width * dpr));
+          canvas.height = Math.max(200, Math.floor(rect.height * dpr));
+        });
+      }
+      window.addEventListener('resize', resizeCanvases);
+
+      // Helper: Format Sun Azimuth label
+      function formatSunAngle(deg) {
+        if (Math.abs(deg) < 0.5) return '0.0° (Zenith)';
+        return deg < 0 ? `${deg.toFixed(1)}° (East)` : `+${deg.toFixed(1)}° (West)`;
+      }
+
+      // Sky Arc Geometry Helper
+      function getSkyGeometry(w, h) {
+        const cx = w * 0.5;
+        const pivotY = h * 0.78;
+        const arcRadius = Math.min(w * 0.41, h * 0.62);
+        const rad = (state.sunAngle * Math.PI) / 180;
+        const sunX = cx + Math.sin(rad) * arcRadius;
+        const sunY = pivotY - Math.cos(rad) * arcRadius;
+        return { cx, pivotY, arcRadius, sunX, sunY };
+      }
+
+      // Pointer / Touch Interaction for Dragging Sun
+      function updateSunFromPointer(clientX, clientY) {
+        const rect = skyCanvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        const cx = rect.width * 0.5;
+        const pivotY = rect.height * 0.78;
+
+        const dx = x - cx;
+        const dy = Math.max(10, pivotY - y);
+        let angleDeg = (Math.atan2(dx, dy) * 180) / Math.PI;
+        angleDeg = Math.max(-75, Math.min(75, angleDeg));
+
+        state.sunAngle = angleDeg;
+        sunSlider.value = angleDeg.toFixed(1);
+        sunSliderVal.textContent = formatSunAngle(angleDeg);
+      }
+
+      skyCanvas.addEventListener('pointerdown', (e) => {
+        state.isDraggingSun = true;
+        if (state.autoSweep) toggleAutoSweep(false);
+        skyCanvas.setPointerCapture(e.pointerId);
+        updateSunFromPointer(e.clientX, e.clientY);
+      });
+
+      skyCanvas.addEventListener('pointermove', (e) => {
+        if (!state.isDraggingSun) return;
+        updateSunFromPointer(e.clientX, e.clientY);
+      });
+
+      skyCanvas.addEventListener('pointerup', (e) => {
+        state.isDraggingSun = false;
+        try { skyCanvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      });
+
+      // UI Control Event Listeners
+      sunSlider.addEventListener('input', (e) => {
+        if (state.autoSweep) toggleAutoSweep(false);
+        state.sunAngle = parseFloat(e.target.value);
+        sunSliderVal.textContent = formatSunAngle(state.sunAngle);
+      });
+
+      vccSlider.addEventListener('input', (e) => {
+        state.vcc = parseFloat(e.target.value);
+        vccSliderVal.textContent = `${state.vcc.toFixed(2)} V`;
+      });
+
+      function toggleAutoSweep(forceState) {
+        state.autoSweep = typeof forceState === 'boolean' ? forceState : !state.autoSweep;
+        if (state.autoSweep) {
+          sweepIcon.textContent = '⏸';
+          sweepLabel.textContent = 'Pause Auto Sweep';
+          btnAutoSweep.classList.remove('bg-amber-500', 'hover:bg-amber-400');
+          btnAutoSweep.classList.add('bg-amber-300', 'hover:bg-amber-200');
+        } else {
+          sweepIcon.textContent = '▶';
+          sweepLabel.textContent = 'Auto Sunrise–Sunset Sweep';
+          btnAutoSweep.classList.add('bg-amber-500', 'hover:bg-amber-400');
+          btnAutoSweep.classList.remove('bg-amber-300', 'hover:bg-amber-200');
+        }
+      }
+
+      btnAutoSweep.addEventListener('click', () => toggleAutoSweep());
+
+      btnTrackingToggle.addEventListener('click', () => {
+        state.trackingEnabled = !state.trackingEnabled;
+        if (state.trackingEnabled) {
+          btnTrackingToggle.textContent = 'Mode: Active Tracking (ON)';
+          btnTrackingToggle.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm cursor-pointer';
+        } else {
+          btnTrackingToggle.textContent = 'Mode: Fixed Panel (0° OFF)';
+          btnTrackingToggle.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 transition shadow-sm cursor-pointer';
+        }
+      });
+
+      btnResetEnergy.addEventListener('click', () => {
+        state.trackedWh = 0;
+        state.fixedWh = 0;
+      });
+
+      weatherBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.weather = btn.dataset.weather;
+          weatherBtns.forEach((b) => {
+            b.className = 'weather-btn px-2.5 py-1 rounded-md font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer';
+          });
+          btn.className = 'weather-btn px-2.5 py-1 rounded-md font-medium bg-amber-500/20 text-amber-300 border border-amber-500/40 cursor-pointer';
+        });
+      });
+
+      // Physics & Analog Circuit Solver
+      function stepPhysics(dt) {
+        state.animPhase += dt * 4.5;
+
+        // 1. Auto Sunrise-to-Sunset Sweep
+        if (state.autoSweep && !state.isDraggingSun) {
+          state.sunAngle += state.sweepDir * 14 * dt;
+          if (state.sunAngle >= 75) {
+            state.sunAngle = 75;
+            state.sweepDir = -1;
+          } else if (state.sunAngle <= -75) {
+            state.sunAngle = -75;
+            state.sweepDir = 1;
+          }
+          sunSlider.value = state.sunAngle.toFixed(1);
+          sunSliderVal.textContent = formatSunAngle(state.sunAngle);
+        }
+
+        // 2. Ambient & Directional Irradiance Factor based on Weather Mode
+        let ambientBase = 0.25;
+        let beamStrength = 0.75;
+        if (state.weather === 'cloudy') {
+          ambientBase = 0.42;
+          beamStrength = 0.35;
+        } else if (state.weather === 'flashlight') {
+          ambientBase = 0.08;
+          beamStrength = 0.92;
+        }
+
+        // 3. Optical Shadow Baffle Physics on LDR 1 (East/Left) and LDR 2 (West/Right)
+        // Angular error: negative means Sun is more East (left) than panel normal
+        const errorDeg = state.sunAngle - state.panelAngle;
+        const errorRad = (errorDeg * Math.PI) / 180;
+
+        // Baffle casts shadow on the opposite LDR proportional to sin(errorRad)
+        const shadowFactor = Math.sin(errorRad) * 1.45;
+        const rawIllum1 = Math.max(0.04, Math.min(1.0, ambientBase + beamStrength * Math.max(0, 1 - Math.max(0, shadowFactor))));
+        const rawIllum2 = Math.max(0.04, Math.min(1.0, ambientBase + beamStrength * Math.max(0, 1 - Math.max(0, -shadowFactor))));
+
+        state.illum1 = rawIllum1;
+        state.illum2 = rawIllum2;
+
+        // 4. LDR Resistance Model (Bright = ~1.2 kOhm, Dark = ~65 kOhm)
+        state.rLdr1 = 1.2 + Math.pow(1 - state.illum1, 1.8) * 63.8;
+        state.rLdr2 = 1.2 + Math.pow(1 - state.illum2, 1.8) * 63.8;
+
+        // 5. Voltage Dividers into TDA2822M
+        // Reference divider: two matched 10 kOhm resistors -> Vcc / 2
+        state.vRef = state.vcc * 0.5;
+        // Optical divider: LDR 1 connected to +Vcc, LDR 2 connected to GND
+        state.vSense = state.vcc * (state.rLdr2 / (state.rLdr1 + state.rLdr2));
+        state.deltaV = state.vSense - state.vRef;
+
+        // 6. TDA2822M Bridge-Tied Load (BTL) Differential Comparator & Hysteresis Dead-Band
+        // Dead-band prevents motor hunting around equilibrium
+        const deadBandV = 0.035;
+        const satDrop = 0.35; // Internal transistor saturation drop at 3.7V
+
+        if (!state.trackingEnabled) {
+          // Fixed-tilt mode: motor disabled, panel gently returns to 0 deg fixed mount
+          state.motorState = 'STOPPED';
+          state.vPin1 = state.vRef;
+          state.vPin3 = state.vRef;
+          state.motorCurrentMa = 0;
+          const diffFixed = 0 - state.panelAngle;
+          if (Math.abs(diffFixed) > 0.2) {
+            state.panelAngle += Math.sign(diffFixed) * Math.min(Math.abs(diffFixed), 45 * dt);
+          } else {
+            state.panelAngle = 0;
+          }
+        } else {
+          if (state.deltaV > deadBandV) {
+            // LDR 1 brighter -> Vsense > Vref -> Drive East (Left)
+            state.motorState = 'EAST';
+            state.vPin1 = satDrop;
+            state.vPin3 = Math.max(satDrop, state.vcc - satDrop);
+            state.motorCurrentMa = 52 + (state.vcc - 3.2) * 14;
+            state.panelAngle -= 36 * dt; // DC geared motor angular velocity (36 deg/s)
+          } else if (state.deltaV < -deadBandV) {
+            // LDR 2 brighter -> Vsense < Vref -> Drive West (Right)
+            state.motorState = 'WEST';
+            state.vPin1 = Math.max(satDrop, state.vcc - satDrop);
+            state.vPin3 = satDrop;
+            state.motorCurrentMa = 52 + (state.vcc - 3.2) * 14;
+            state.panelAngle += 36 * dt;
+          } else {
+            // Equilibrium locked: both outputs equal, zero motor voltage
+            state.motorState = 'STOPPED';
+            state.vPin1 = state.vRef;
+            state.vPin3 = state.vRef;
+            state.motorCurrentMa = 7.5; // TDA2822M quiescent current (~7.5 mA)
+          }
+          state.panelAngle = Math.max(-75, Math.min(75, state.panelAngle));
+        }
+
+        // 7. Photovoltaic Output & Environmental Calculations
+        const peakPanelWatts = state.weather === 'cloudy' ? 4.5 : 10.0;
+        const incidenceActiveDeg = Math.abs(state.sunAngle - state.panelAngle);
+        const incidenceFixedDeg = Math.abs(state.sunAngle - 0);
+
+        const cosActive = Math.max(0, Math.cos((incidenceActiveDeg * Math.PI) / 180));
+        const cosFixed = Math.max(0, Math.cos((incidenceFixedDeg * Math.PI) / 180));
+
+        const powerActiveW = peakPanelWatts * cosActive;
+        const powerFixedW = peakPanelWatts * cosFixed;
+
+        // Accumulate simulated solar hours (1 real sec = 0.25 simulated solar hours for demo)
+        const simHoursStep = dt * 0.25;
+        state.trackedWh += powerActiveW * simHoursStep;
+        state.fixedWh += powerFixedW * simHoursStep;
+
+        updateTelemetryDOM(incidenceActiveDeg, cosActive, powerActiveW, powerFixedW);
+      }
+
+      // Update HTML Telemetry Readouts
+      function updateTelemetryDOM(incidenceDeg, cosActive, powerActiveW, powerFixedW) {
+        overlayAngleReadout.textContent = `Sun: ${state.sunAngle.toFixed(1)}° | Panel: ${state.panelAngle.toFixed(1)}°`;
+
+        readoutVref.textContent = `${state.vRef.toFixed(2)} V`;
+        readoutVsense.textContent = `${state.vSense.toFixed(2)} V`;
+
+        const signDelta = state.deltaV >= 0 ? '+' : '';
+        readoutDeltaV.textContent = `${signDelta}${state.deltaV.toFixed(2)} V`;
+        readoutDeltaV.className = `mono text-lg font-bold mt-1 ${
+          Math.abs(state.deltaV) > 0.035 ? 'text-amber-400' : 'text-slate-200'
+        }`;
+
+        const vMotor = state.vPin1 - state.vPin3;
+        const signMotor = vMotor > 0.05 ? '+' : '';
+        readoutVmotor.textContent = `${signMotor}${vMotor.toFixed(2)} V`;
+
+        // Motor State Pill & Safety Badge
+        if (state.motorState === 'EAST') {
+          motorDirectionPill.textContent = '◀ ROTATING EAST (PIN 3 HIGH)';
+          motorDirectionPill.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold mono bg-amber-500/20 text-amber-300 border border-amber-500/40';
+        } else if (state.motorState === 'WEST') {
+          motorDirectionPill.textContent = 'ROTATING WEST (PIN 1 HIGH) ▶';
+          motorDirectionPill.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40';
+        } else {
+          motorDirectionPill.textContent = state.trackingEnabled ? 'EQUILIBRIUM LOCKED (0 V)' : 'FIXED MOUNT (TRACKING OFF)';
+          motorDirectionPill.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+        }
+
+        const currentA = state.motorCurrentMa / 1000;
+        icSafetyBadge.textContent = `IC SAFE • ${currentA.toFixed(2)} A / 1.0 A Max`;
+
+        // LDR Readouts
+        readoutLdr1.textContent = `${state.rLdr1.toFixed(1)} kΩ (${Math.round(state.illum1 * 100)}%)`;
+        readoutLdr2.textContent = `${state.rLdr2.toFixed(1)} kΩ (${Math.round(state.illum2 * 100)}%)`;
+        barLdr1.style.width = `${Math.round(state.illum1 * 100)}%`;
+        barLdr2.style.width = `${Math.round(state.illum2 * 100)}%`;
+
+        // PV & Environmental Readouts
+        readoutIncidence.textContent = `${incidenceDeg.toFixed(1)}°`;
+        readoutCosEff.textContent = `${(cosActive * 100).toFixed(1)}%`;
+
+        const instantGainPct = powerFixedW > 0.05 ? Math.max(0, ((powerActiveW - powerFixedW) / powerFixedW) * 100) : 0;
+        readoutInstantGain.textContent = `+${instantGainPct.toFixed(1)}%`;
+
+        readoutTrackedPower.textContent = `${powerActiveW.toFixed(2)} W`;
+        barTrackedPower.style.width = `${Math.min(100, (powerActiveW / 10) * 100)}%`;
+
+        readoutFixedPower.textContent = `${powerFixedW.toFixed(2)} W`;
+        barFixedPower.style.width = `${Math.min(100, (powerFixedW / 10) * 100)}%`;
+
+        const cumGainPct = state.fixedWh > 0.01 ? Math.max(0, ((state.trackedWh - state.fixedWh) / state.fixedWh) * 100) : 0;
+        readoutCumGain.textContent = `+${cumGainPct.toFixed(1)}%`;
+        readoutEnergySummary.textContent = `Tracked: ${state.trackedWh.toFixed(1)} Wh vs Fixed: ${state.fixedWh.toFixed(1)} Wh`;
+
+        // Scale 10 W model up by 100x to represent a 1 kW rooftop array, using 0.82 kg CO2/kWh CEA India factor
+        const extraKwh1kW = Math.max(0, ((state.trackedWh - state.fixedWh) * 100) / 1000);
+        const co2SavedKg = extraKwh1kW * 0.82;
+        readoutCo2Saved.textContent = `${co2SavedKg.toFixed(2)} kg`;
+      }
+
+      // Render Interactive Sky & Solar Panel Canvas
+      function drawSkyCanvas() {
+        const w = skyCanvas.width;
+        const h = skyCanvas.height;
+        const dpr = window.devicePixelRatio || 1;
+        skyCtx.save();
+        skyCtx.clearRect(0, 0, w, h);
+
+        // Sky Background Gradient
+        const skyGrad = skyCtx.createLinearGradient(0, 0, 0, h);
+        if (state.weather === 'flashlight') {
+          skyGrad.addColorStop(0, '#040711');
+          skyGrad.addColorStop(1, '#0f172a');
+        } else if (state.weather === 'cloudy') {
+          skyGrad.addColorStop(0, '#1e293b');
+          skyGrad.addColorStop(1, '#0f172a');
+        } else {
+          skyGrad.addColorStop(0, '#0c1e38');
+          skyGrad.addColorStop(0.7, '#132a4a');
+          skyGrad.addColorStop(1, '#0f172a');
+        }
+        skyCtx.fillStyle = skyGrad;
+        skyCtx.fillRect(0, 0, w, h);
+
+        const { cx, pivotY, arcRadius, sunX, sunY } = getSkyGeometry(w, h);
+
+        // Ground Horizon Strip
+        skyCtx.fillStyle = '#09131d';
+        skyCtx.fillRect(0, pivotY + 26 * dpr, w, h - pivotY);
+        skyCtx.strokeStyle = '#1e293b';
+        skyCtx.lineWidth = 2 * dpr;
+        skyCtx.beginPath();
+        skyCtx.moveTo(0, pivotY + 26 * dpr);
+        skyCtx.lineTo(w, pivotY + 26 * dpr);
+        skyCtx.stroke();
+
+        // Compass Labels (East / Zenith / West)
+        skyCtx.fillStyle = '#64748b';
+        skyCtx.font = `600 ${11 * dpr}px Inter, sans-serif`;
+        skyCtx.textAlign = 'center';
+        skyCtx.fillText('EAST (−75°)', cx - arcRadius * 0.92, pivotY + 14 * dpr);
+        skyCtx.fillText('ZENITH (0°)', cx, pivotY - arcRadius - 14 * dpr);
+        skyCtx.fillText('WEST (+75°)', cx + arcRadius * 0.92, pivotY + 14 * dpr);
+
+        // Dashed Semi-Circular Sun Trajectory Arc
+        skyCtx.save();
+        skyCtx.setLineDash([6 * dpr, 6 * dpr]);
+        skyCtx.strokeStyle = 'rgba(245, 158, 11, 0.32)';
+        skyCtx.lineWidth = 2 * dpr;
+        skyCtx.beginPath();
+        skyCtx.arc(cx, pivotY, arcRadius, -Math.PI * 0.92, -Math.PI * 0.08);
+        skyCtx.stroke();
+        skyCtx.restore();
+
+        // Directional Sunbeams / Flashlight Cone toward PV Panel
+        const beamGrad = skyCtx.createLinearGradient(sunX, sunY, cx, pivotY);
+        if (state.weather === 'flashlight') {
+          beamGrad.addColorStop(0, 'rgba(253, 224, 71, 0.45)');
+          beamGrad.addColorStop(1, 'rgba(253, 224, 71, 0.02)');
+        } else if (state.weather === 'cloudy') {
+          beamGrad.addColorStop(0, 'rgba(226, 232, 240, 0.22)');
+          beamGrad.addColorStop(1, 'rgba(226, 232, 240, 0.01)');
+        } else {
+          beamGrad.addColorStop(0, 'rgba(251, 191, 36, 0.34)');
+          beamGrad.addColorStop(1, 'rgba(251, 191, 36, 0.02)');
+        }
+
+        const perpAngle = Math.atan2(pivotY - sunY, cx - sunX) + Math.PI / 2;
+        const spread = 56 * dpr;
+        skyCtx.fillStyle = beamGrad;
+        skyCtx.beginPath();
+        skyCtx.moveTo(sunX - Math.cos(perpAngle) * 14 * dpr, sunY - Math.sin(perpAngle) * 14 * dpr);
+        skyCtx.lineTo(sunX + Math.cos(perpAngle) * 14 * dpr, sunY + Math.sin(perpAngle) * 14 * dpr);
+        skyCtx.lineTo(cx + Math.cos(perpAngle) * spread, pivotY + Math.sin(perpAngle) * spread);
+        skyCtx.lineTo(cx - Math.cos(perpAngle) * spread, pivotY - Math.sin(perpAngle) * spread);
+        skyCtx.closePath();
+        skyCtx.fill();
+
+        // Draw Draggable Sun / Flashlight Orb
+        const sunGlow = skyCtx.createRadialGradient(sunX, sunY, 4 * dpr, sunX, sunY, 34 * dpr);
+        sunGlow.addColorStop(0, state.weather === 'flashlight' ? '#fef08a' : '#fbbf24');
+        sunGlow.addColorStop(0.5, 'rgba(245, 158, 11, 0.35)');
+        sunGlow.addColorStop(1, 'rgba(245, 158, 11, 0)');
+        skyCtx.fillStyle = sunGlow;
+        skyCtx.beginPath();
+        skyCtx.arc(sunX, sunY, 34 * dpr, 0, Math.PI * 2);
+        skyCtx.fill();
+
+        skyCtx.fillStyle = state.weather === 'flashlight' ? '#fef9c3' : '#f59e0b';
+        skyCtx.beginPath();
+        skyCtx.arc(sunX, sunY, 15 * dpr, 0, Math.PI * 2);
+        skyCtx.fill();
+        skyCtx.strokeStyle = '#ffffff';
+        skyCtx.lineWidth = 2 * dpr;
+        skyCtx.stroke();
+
+        // Pedestal Stand & DC Geared Motor Hub
+        skyCtx.fillStyle = '#334155';
+        skyCtx.fillRect(cx - 8 * dpr, pivotY, 16 * dpr, 28 * dpr);
+        skyCtx.fillStyle = '#475569';
+        skyCtx.beginPath();
+        skyCtx.roundRect(cx - 26 * dpr, pivotY + 22 * dpr, 52 * dpr, 10 * dpr, 4 * dpr);
+        skyCtx.fill();
+
+        // Rotating Solar Panel + Dual Edge LDRs + Central Shadow Baffle
+        skyCtx.save();
+        skyCtx.translate(cx, pivotY);
+        skyCtx.rotate((state.panelAngle * Math.PI) / 180);
+
+        const panelW = 148 * dpr;
+        const panelH = 12 * dpr;
+
+        // Panel Normal Axis Indicator (Dashed line perpendicular to PV surface)
+        skyCtx.save();
+        skyCtx.setLineDash([4 * dpr, 4 * dpr]);
+        skyCtx.strokeStyle = 'rgba(52, 211, 153, 0.55)';
+        skyCtx.lineWidth = 1.5 * dpr;
+        skyCtx.beginPath();
+        skyCtx.moveTo(0, -10 * dpr);
+        skyCtx.lineTo(0, -78 * dpr);
+        skyCtx.stroke();
+        skyCtx.restore();
+
+        // Aluminum Frame Base
+        skyCtx.fillStyle = '#94a3b8';
+        skyCtx.beginPath();
+        skyCtx.roundRect(-panelW / 2, -panelH / 2, panelW, panelH, 4 * dpr);
+        skyCtx.fill();
+
+        // Blue/Indigo Monocrystalline PV Cells Top Layer
+        skyCtx.fillStyle = '#1d4ed8';
+        skyCtx.fillRect(-panelW / 2 + 4 * dpr, -panelH / 2 - 2 * dpr, panelW - 8 * dpr, 5 * dpr);
+
+        // Central Opaque Shadow Baffle
+        skyCtx.fillStyle = '#e2e8f0';
+        skyCtx.fillRect(-2 * dpr, -panelH / 2 - 24 * dpr, 4 * dpr, 24 * dpr);
+
+        // LDR 1 (Left / East Edge)
+        const ldr1X = -panelW / 2 + 12 * dpr;
+        skyCtx.fillStyle = state.illum1 > 0.55 ? '#fbbf24' : '#78350f';
+        skyCtx.beginPath();
+        skyCtx.arc(ldr1X, -panelH / 2 - 5 * dpr, 6 * dpr, 0, Math.PI * 2);
+        skyCtx.fill();
+        skyCtx.strokeStyle = '#f8fafc';
+        skyCtx.lineWidth = 1.5 * dpr;
+        skyCtx.stroke();
+
+        // LDR 2 (Right / West Edge)
+        const ldr2X = panelW / 2 - 12 * dpr;
+        skyCtx.fillStyle = state.illum2 > 0.55 ? '#fbbf24' : '#78350f';
+        skyCtx.beginPath();
+        skyCtx.arc(ldr2X, -panelH / 2 - 5 * dpr, 6 * dpr, 0, Math.PI * 2);
+        skyCtx.fill();
+        skyCtx.strokeStyle = '#f8fafc';
+        skyCtx.lineWidth = 1.5 * dpr;
+        skyCtx.stroke();
+
+        // LDR Labels attached to panel frame
+        skyCtx.fillStyle = '#cbd5e1';
+        skyCtx.font = `700 ${9.5 * dpr}px JetBrains Mono, monospace`;
+        skyCtx.textAlign = 'center';
+        skyCtx.fillText('LDR 1', ldr1X, panelH / 2 + 13 * dpr);
+        skyCtx.fillText('LDR 2', ldr2X, panelH / 2 + 13 * dpr);
+
+        skyCtx.restore();
+
+        // Geared Motor Pivot Center Cap
+        skyCtx.fillStyle = state.motorState !== 'STOPPED' ? '#f59e0b' : '#10b981';
+        skyCtx.beginPath();
+        skyCtx.arc(cx, pivotY, 7 * dpr, 0, Math.PI * 2);
+        skyCtx.fill();
+        skyCtx.strokeStyle = '#0f172a';
+        skyCtx.lineWidth = 2 * dpr;
+        skyCtx.stroke();
+
+        skyCtx.restore();
+      }
+
+      // Render Live TDA2822M Pinout & Animated Current Flow Schematic
+      function drawSchematicCanvas() {
+        const w = schemCanvas.width;
+        const h = schemCanvas.height;
+        const dpr = window.devicePixelRatio || 1;
+        schemCtx.save();
+        schemCtx.clearRect(0, 0, w, h);
+
+        schemCtx.fillStyle = '#060b16';
+        schemCtx.fillRect(0, 0, w, h);
+
+        // Central TDA2822M DIP-8 Package
+        const icW = 136 * dpr;
+        const icH = 176 * dpr;
+        const icX = w * 0.5 - icW * 0.5;
+        const icY = h * 0.5 - icH * 0.5;
+
+        // IC Body
+        schemCtx.fillStyle = '#1e293b';
+        schemCtx.strokeStyle = '#475569';
+        schemCtx.lineWidth = 2 * dpr;
+        schemCtx.beginPath();
+        schemCtx.roundRect(icX, icY, icW, icH, 8 * dpr);
+        schemCtx.fill();
+        schemCtx.stroke();
+
+        // Top Orientation Notch
+        schemCtx.fillStyle = '#060b16';
+        schemCtx.beginPath();
+        schemCtx.arc(icX + icW / 2, icY, 12 * dpr, 0, Math.PI);
+        schemCtx.fill();
+        schemCtx.stroke();
+
+        // IC Title inside Chip
+        schemCtx.fillStyle = '#f8fafc';
+        schemCtx.font = `700 ${13 * dpr}px JetBrains Mono, monospace`;
+        schemCtx.textAlign = 'center';
+        schemCtx.fillText('TDA2822M', icX + icW / 2, icY + icH * 0.46);
+        schemCtx.fillStyle = '#94a3b8';
+        schemCtx.font = `500 ${10 * dpr}px Inter, sans-serif`;
+        schemCtx.fillText('BTL Dual Driver', icX + icW / 2, icY + icH * 0.57);
+
+        // Pin Y Positions (4 rows)
+        const pinOffsets = [0.18, 0.40, 0.62, 0.84].map((f) => icY + icH * f);
+        const leftPinLabels = ['1: OUT 1', '2: +Vcc', '3: OUT 2', '4: GND'];
+        const rightPinLabels = ['8: IN 1−', '7: IN 1+', '6: IN 2−', '5: IN 2+'];
+
+        // Draw Pins & Internal Pin Numbers
+        pinOffsets.forEach((py, idx) => {
+          // Left pins (1..4)
+          schemCtx.fillStyle = '#94a3b8';
+          schemCtx.fillRect(icX - 14 * dpr, py - 5 * dpr, 14 * dpr, 10 * dpr);
+          schemCtx.fillStyle = '#fbbf24';
+          schemCtx.font = `700 ${10 * dpr}px JetBrains Mono, monospace`;
+          schemCtx.textAlign = 'left';
+          schemCtx.fillText(leftPinLabels[idx], icX + 8 * dpr, py + 3.5 * dpr);
+
+          // Right pins (8..5)
+          schemCtx.fillStyle = '#94a3b8';
+          schemCtx.fillRect(icX + icW, py - 5 * dpr, 14 * dpr, 10 * dpr);
+          schemCtx.fillStyle = '#38bdf8';
+          schemCtx.textAlign = 'right';
+          schemCtx.fillText(rightPinLabels[idx], icX + icW - 8 * dpr, py + 3.5 * dpr);
+        });
+
+        // Cross-Channel Jumper Links on Right Side (Pin 8 <-> Pin 6, Pin 7 <-> Pin 5)
+        const busSenseX = icX + icW + 30 * dpr; // Pins 8 & 6 node
+        const busRefX = icX + icW + 48 * dpr;   // Pins 7 & 5 node
+
+        // Red Jumper: Pin 8 (row 0) <-> Pin 6 (row 2)
+        schemCtx.strokeStyle = '#f59e0b';
+        schemCtx.lineWidth = 2.2 * dpr;
+        schemCtx.beginPath();
+        schemCtx.moveTo(icX + icW + 14 * dpr, pinOffsets[0]);
+        schemCtx.lineTo(busSenseX, pinOffsets[0]);
+        schemCtx.lineTo(busSenseX, pinOffsets[2]);
+        schemCtx.lineTo(icX + icW + 14 * dpr, pinOffsets[2]);
+        schemCtx.stroke();
+
+        // Cyan Jumper: Pin 7 (row 1) <-> Pin 5 (row 3)
+        schemCtx.strokeStyle = '#22d3ee';
+        schemCtx.lineWidth = 2.2 * dpr;
+        schemCtx.beginPath();
+        schemCtx.moveTo(icX + icW + 14 * dpr, pinOffsets[1]);
+        schemCtx.lineTo(busRefX, pinOffsets[1]);
+        schemCtx.lineTo(busRefX, pinOffsets[3]);
+        schemCtx.lineTo(icX + icW + 14 * dpr, pinOffsets[3]);
+        schemCtx.stroke();
+
+        // Right-Side Divider Nodes (LDR Bridge & 10 kOhm Reference Bridge)
+        const rightBoxX = Math.min(w - 175 * dpr, busRefX + 26 * dpr);
+        const boxW = Math.max(130 * dpr, w - rightBoxX - 14 * dpr);
+
+        // Optical Divider Box (Top Right)
+        schemCtx.fillStyle = '#0f172a';
+        schemCtx.strokeStyle = '#f59e0b';
+        schemCtx.lineWidth = 1.5 * dpr;
+        schemCtx.beginPath();
+        schemCtx.roundRect(rightBoxX, icY - 6 * dpr, boxW, 78 * dpr, 6 * dpr);
+        schemCtx.fill();
+        schemCtx.stroke();
+
+        // Wire from busSenseX to Optical Box
+        schemCtx.strokeStyle = '#f59e0b';
+        schemCtx.beginPath();
+        schemCtx.moveTo(busSenseX, pinOffsets[0]);
+        schemCtx.lineTo(rightBoxX, pinOffsets[0]);
+        schemCtx.stroke();
+
+        schemCtx.fillStyle = '#fbbf24';
+        schemCtx.font = `700 ${10 * dpr}px Inter, sans-serif`;
+        schemCtx.textAlign = 'left';
+        schemCtx.fillText('LDR Optical Divider', rightBoxX + 8 * dpr, icY + 11 * dpr);
+        schemCtx.fillStyle = '#cbd5e1';
+        schemCtx.font = `500 ${9.5 * dpr}px JetBrains Mono, monospace`;
+        schemCtx.fillText(`LDR1 (+Vcc): ${state.rLdr1.toFixed(1)}kΩ`, rightBoxX + 8 * dpr, icY + 28 * dpr);
+        schemCtx.fillText(`LDR2 (GND) : ${state.rLdr2.toFixed(1)}kΩ`, rightBoxX + 8 * dpr, icY + 43 * dpr);
+        schemCtx.fillStyle = '#fde047';
+        schemCtx.fillText(`Vsense = ${state.vSense.toFixed(2)} V`, rightBoxX + 8 * dpr, icY + 60 * dpr);
+
+        // Reference Divider Box (Bottom Right)
+        schemCtx.fillStyle = '#0f172a';
+        schemCtx.strokeStyle = '#22d3ee';
+        schemCtx.beginPath();
+        schemCtx.roundRect(rightBoxX, icY + 96 * dpr, boxW, 78 * dpr, 6 * dpr);
+        schemCtx.fill();
+        schemCtx.stroke();
+
+        // Wire from busRefX to Reference Box
+        schemCtx.strokeStyle = '#22d3ee';
+        schemCtx.beginPath();
+        schemCtx.moveTo(busRefX, pinOffsets[3]);
+        schemCtx.lineTo(rightBoxX, pinOffsets[3]);
+        schemCtx.stroke();
+
+        schemCtx.fillStyle = '#22d3ee';
+        schemCtx.font = `700 ${10 * dpr}px Inter, sans-serif`;
+        schemCtx.fillText('Reference Divider', rightBoxX + 8 * dpr, icY + 113 * dpr);
+        schemCtx.fillStyle = '#cbd5e1';
+        schemCtx.font = `500 ${9.5 * dpr}px JetBrains Mono, monospace`;
+        schemCtx.fillText('R1 (+Vcc): 10.0 kΩ', rightBoxX + 8 * dpr, icY + 130 * dpr);
+        schemCtx.fillText('R2 (GND) : 10.0 kΩ', rightBoxX + 8 * dpr, icY + 145 * dpr);
+        schemCtx.fillStyle = '#67e8f9';
+        schemCtx.fillText(`Vref = ${state.vRef.toFixed(2)} V`, rightBoxX + 8 * dpr, icY + 162 * dpr);
+
+        // Left Side: DC Geared Motor (Pins 1 & 3) and 18650 Battery (Pins 2 & 4)
+        const leftBoxX = 14 * dpr;
+        const leftBoxW = Math.max(125 * dpr, icX - 48 * dpr - leftBoxX);
+
+        // DC Geared Motor Box (Top Left)
+        const motorActive = state.motorState !== 'STOPPED';
+        schemCtx.fillStyle = '#0f172a';
+        schemCtx.strokeStyle = motorActive ? '#10b981' : '#475569';
+        schemCtx.lineWidth = 1.8 * dpr;
+        schemCtx.beginPath();
+        schemCtx.roundRect(leftBoxX, icY - 6 * dpr, leftBoxW, 82 * dpr, 6 * dpr);
+        schemCtx.fill();
+        schemCtx.stroke();
+
+        // Wires from Pin 1 & Pin 3 to Motor Box
+        const pin1WireY = pinOffsets[0];
+        const pin3WireY = pinOffsets[2];
+        const midBusX = icX - 30 * dpr;
+
+        schemCtx.strokeStyle = state.vPin1 > state.vPin3 ? '#f59e0b' : '#64748b';
+        schemCtx.lineWidth = 2 * dpr;
+        schemCtx.beginPath();
+        schemCtx.moveTo(icX - 14 * dpr, pin1WireY);
+        schemCtx.lineTo(leftBoxX + leftBoxW, pin1WireY);
+        schemCtx.stroke();
+
+        schemCtx.strokeStyle = state.vPin3 > state.vPin1 ? '#f59e0b' : '#64748b';
+        schemCtx.beginPath();
+        schemCtx.moveTo(icX - 14 * dpr, pin3WireY);
+        schemCtx.lineTo(midBusX, pin3WireY);
+        schemCtx.lineTo(midBusX, icY + 56 * dpr);
+        schemCtx.lineTo(leftBoxX + leftBoxW, icY + 56 * dpr);
+        schemCtx.stroke();
+
+        // Animated Current Flow Dots when Motor is Running
+        if (motorActive) {
+          const t = (state.animPhase % 1);
+          const dir = state.motorState === 'WEST' ? 1 : -1;
+          const pos1 = dir === 1 ? (1 - t) : t;
+          const xDot = leftBoxX + leftBoxW + pos1 * (icX - 14 * dpr - (leftBoxX + leftBoxW));
+          schemCtx.fillStyle = '#fbbf24';
+          schemCtx.beginPath();
+          schemCtx.arc(xDot, pin1WireY, 4 * dpr, 0, Math.PI * 2);
+          schemCtx.fill();
+        }
+
+        schemCtx.fillStyle = '#34d399';
+        schemCtx.font = `700 ${10 * dpr}px Inter, sans-serif`;
+        schemCtx.textAlign = 'left';
+        schemCtx.fillText('DC Geared Motor', leftBoxX + 8 * dpr, icY + 12 * dpr);
+        schemCtx.fillStyle = '#cbd5e1';
+        schemCtx.font = `500 ${9.5 * dpr}px JetBrains Mono, monospace`;
+        schemCtx.fillText(`Pin 1: ${state.vPin1.toFixed(2)} V`, leftBoxX + 8 * dpr, icY + 30 * dpr);
+        schemCtx.fillText(`Pin 3: ${state.vPin3.toFixed(2)} V`, leftBoxX + 8 * dpr, icY + 46 * dpr);
+        schemCtx.fillStyle = motorActive ? '#fbbf24' : '#94a3b8';
+        schemCtx.fillText(`State: ${state.motorState}`, leftBoxX + 8 * dpr, icY + 64 * dpr);
+
+        // 18650 Battery Box (Bottom Left)
+        schemCtx.fillStyle = '#0f172a';
+        schemCtx.strokeStyle = '#ef4444';
+        schemCtx.lineWidth = 1.5 * dpr;
+        schemCtx.beginPath();
+        schemCtx.roundRect(leftBoxX, icY + 96 * dpr, leftBoxW, 78 * dpr, 6 * dpr);
+        schemCtx.fill();
+        schemCtx.stroke();
+
+        // Pin 2 (+Vcc) & Pin 4 (GND) Connections
+        schemCtx.strokeStyle = '#ef4444';
+        schemCtx.lineWidth = 2 * dpr;
+        schemCtx.beginPath();
+        schemCtx.moveTo(icX - 14 * dpr, pinOffsets[1]);
+        schemCtx.lineTo(midBusX - 10 * dpr, pinOffsets[1]);
+        schemCtx.lineTo(midBusX - 10 * dpr, icY + 118 * dpr);
+        schemCtx.lineTo(leftBoxX + leftBoxW, icY + 118 * dpr);
+        schemCtx.stroke();
+
+        schemCtx.strokeStyle = '#3b82f6';
+        schemCtx.beginPath();
+        schemCtx.moveTo(icX - 14 * dpr, pinOffsets[3]);
+        schemCtx.lineTo(leftBoxX + leftBoxW, pinOffsets[3]);
+        schemCtx.stroke();
+
+        schemCtx.fillStyle = '#f87171';
+        schemCtx.font = `700 ${10 * dpr}px Inter, sans-serif`;
+        schemCtx.fillText('18650 Li-Ion Supply', leftBoxX + 8 * dpr, icY + 113 * dpr);
+        schemCtx.fillStyle = '#cbd5e1';
+        schemCtx.font = `500 ${9.5 * dpr}px JetBrains Mono, monospace`;
+        schemCtx.fillText(`Pin 2 (+Vcc): +${state.vcc.toFixed(2)}V`, leftBoxX + 8 * dpr, icY + 132 * dpr);
+        schemCtx.fillText('Pin 4 (GND) :  0.00V', leftBoxX + 8 * dpr, icY + 148 * dpr);
+        schemCtx.fillStyle = '#34d399';
+        schemCtx.fillText(`I_total: ${state.motorCurrentMa.toFixed(0)} mA`, leftBoxX + 8 * dpr, icY + 164 * dpr);
+
+        schemCtx.restore();
+      }
+
+      // Main Animation Loop
+      let lastTime = performance.now();
+      function animate(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        stepPhysics(dt);
+        drawSkyCanvas();
+        drawSchematicCanvas();
+
+        requestAnimationFrame(animate);
+      }
+
+      window.onload = function () {
+        resizeCanvases();
+        requestAnimationFrame(animate);
+      };
+    })();
+  </script>
+</body>
+</html>
